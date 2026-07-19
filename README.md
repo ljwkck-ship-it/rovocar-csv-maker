@@ -62,6 +62,14 @@ MAX_REQUEST_BYTES
 - 이후 Supabase Invocations에서 사용자 요청이 `401`임을 확인함. 원인은 오래 유지된 브라우저의 인증 토큰.
   - `src/main.js`는 OCR 직전에 `supabase.auth.getSession()`을 호출해 토큰을 갱신하도록 수정했고, 커밋 `f0ed547`로 Pages에 푸시함.
   - 사용자에게 새 Pages 빌드 반영 뒤 새로고침 → 카카오 로그인 → 같은 사진 재시도를 안내함.
+- Safari CORS 사전 요청은 성공했지만 `authorization`, `content-type` 허용 헤더가 없어 실제 POST가 전송되지 않는 문제를 발견함.
+  - 함수에 `access-control-allow-methods`와 `access-control-allow-headers`를 추가해 Dashboard에서 재배포함.
+  - `curl` OPTIONS 검사로 두 헤더가 실제 응답에 포함된 것을 확인함.
+- 그 뒤 실제 OCR POST는 서버에 도달했으나 `502`가 발생함.
+  - 함수 로그의 `gemini_request_failed` 이벤트에서 Gemini HTTP 상태 `404`를 확인함.
+  - 고정 모델명 `gemini-2.5-flash`를 사용하던 코드를 바꿔, API 키로 조회한 사용 가능 모델 목록에서 `generateContent`를 지원하는 Flash 모델을 자동 선택하도록 수정함.
+  - 이 동적 모델 선택 코드는 커밋 `d0adb9a`이며, 2026-07-19에 Supabase Dashboard에서도 직접 재배포 완료.
+- Gemini 오류는 API 키/권한, 무료 쿼터, 서버 설정, 응답 형식별로 안전한 한국어 안내를 반환하도록 보강함.
 
 ## 다음 세션에서 할 일
 
@@ -69,12 +77,12 @@ MAX_REQUEST_BYTES
    ```bash
    gh api repos/ljwkck-ship-it/rovocar-csv-maker/pages/builds/latest --jq '{status,updated_at}'
    ```
-2. 사용자가 새로고침 후 카카오 로그인을 다시 하고 동일 사진으로 OCR을 재시도했는지 확인한다.
+2. 첫 작업으로 사용자가 동일 사진으로 OCR을 다시 시도하게 한다. Edge Function은 이미 직접 배포됐으므로 웹사이트 새 빌드는 필요하지 않다.
 3. 재시도에도 실패하면 Supabase Dashboard의 **Edge Functions → extract-vocabulary → Invocations**에서 최신 POST 상태 코드를 확인한다.
    - `401`: 로그인/토큰 문제
    - `429`: Gemini 또는 앱 사용량 제한
-   - `502` 또는 `503`: Gemini API 응답 또는 서버 설정 문제
-4. Gemini 오류를 더 정확히 표시해야 한다면 함수의 `geminiResponse.ok` 분기에서 상태 코드별 안전한 메시지를 반환하고, Dashboard에서 다시 배포한다.
+   - `502` 또는 `503`: 함수 로그에서 `gemini_request_failed` 및 HTTP 상태를 확인한다.
+4. 동적 모델 선택 후에도 `404`가 나면 함수에서 Gemini 모델 목록 조회 결과를 **모델명만** 안전하게 로그로 남겨, API 키에 실제 허용된 모델을 확인한다. 키 값·토큰·사진 내용은 로그에 남기지 않는다.
 5. 실사진 추출이 성공하면 80개 단어가 모두 편집 표에 나타나는지, CSV 다운로드 후 RoVoCar 앱에서 불러와지는지 확인한다.
 
 ## 검증 명령
