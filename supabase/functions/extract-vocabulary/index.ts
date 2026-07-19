@@ -6,7 +6,12 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const MAX_EXTRACTION_ITEMS = 150;
 const MAX_EXTRACTION_TEXT_LENGTH = 300;
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
+const JSON_HEADERS = {
+  'content-type': 'application/json; charset=utf-8',
+  'cache-control': 'no-store',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-headers': 'authorization, content-type, apikey, x-client-info',
+};
 
 function origins() { return (Deno.env.get('ALLOWED_ORIGINS') ?? '').split(',').map((value) => value.trim()).filter(Boolean); }
 function cors(origin: string | null) {
