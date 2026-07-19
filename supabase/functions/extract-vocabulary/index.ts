@@ -92,7 +92,7 @@ Deno.serve(async (request) => {
     }
 
     const url = Deno.env.get('SUPABASE_URL'); const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!url || !serviceKey || !Deno.env.get('GEMINI_API_KEY_PRIMARY')) throw new Error('server configuration missing');
+    if (!url || !serviceKey || !Deno.env.get('GEMINI_API_KEY_PRIMARY')) return reply(origin, 503, { error: 'server_configuration', message: '서버의 Gemini 설정을 확인해야 합니다.' });
     const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: userData, error: userError } = await admin.auth.getUser(auth.slice(7));
     if (userError || !userData.user) return reply(origin, 401, { error: 'authentication_required', message: '다시 로그인해 주세요.' });
@@ -101,7 +101,13 @@ Deno.serve(async (request) => {
     if (!quota.allowed) return reply(origin, 429, { error: quota.reason === 'daily_limit' ? 'daily_limit' : 'rate_limit', message: quota.reason === 'daily_limit' ? '가족용 오늘 사용 횟수를 모두 썼어요. 내일 다시 시도해 주세요.' : '잠시 후 다시 시도해 주세요.' });
 
     const geminiResponse = await requestGemini(mimeType, data);
-    if (!geminiResponse.ok) return reply(origin, 502, { error: 'extraction_unavailable', message: '지금은 사진을 읽지 못했어요. 잠시 뒤 다시 시도해 주세요.' });
+    if (!geminiResponse.ok) {
+      const upstreamStatus = geminiResponse.status;
+      console.error(JSON.stringify({ event: 'gemini_request_failed', status: upstreamStatus }));
+      if (upstreamStatus === 401 || upstreamStatus === 403) return reply(origin, 502, { error: 'gemini_access_denied', message: 'Gemini API 키 설정을 확인해야 합니다.' });
+      if (upstreamStatus === 429) return reply(origin, 429, { error: 'gemini_rate_limited', message: 'Gemini 무료 사용량에 도달했습니다. 잠시 뒤 다시 시도해 주세요.' });
+      return reply(origin, 502, { error: 'extraction_unavailable', message: 'Gemini가 지금 요청을 처리하지 못했어요. 잠시 뒤 다시 시도해 주세요.' });
+    }
     const geminiPayload = await geminiResponse.json();
     const text = geminiPayload?.candidates?.[0]?.content?.parts?.find((part: { text?: unknown }) => typeof part.text === 'string')?.text;
     let parsed: unknown; try { parsed = JSON.parse(text); } catch { return reply(origin, 502, { error: 'invalid_extraction', message: '안전하게 표시할 수 없는 결과예요. 사진을 바꿔 다시 시도해 주세요.' }); }

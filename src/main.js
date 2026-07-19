@@ -102,7 +102,7 @@ async function renderExtracting() {
     }
     window.setTimeout(() => { state.rows = structuredClone(demoRows); state.warnings = ['사진 오른쪽 가장자리의 한 행은 잘렸을 수 있어요.']; renderReview(); }, 1050);
   } catch (error) {
-    const message = error?.error === 'daily_limit' ? '가족용 오늘 사용 횟수를 모두 썼어요. 내일 다시 시도해 주세요.' : error?.error === 'unsupported_image' || error?.error === 'image_too_large' ? error.message : error?.error === 'authentication_required' ? '로그인이 만료되었어요. 다시 로그인해 주세요.' : '사진을 읽지 못했어요. 잠시 뒤 다시 시도하거나 사진을 바꿔 주세요.';
+    const message = error?.error === 'daily_limit' ? '가족용 오늘 사용 횟수를 모두 썼어요. 내일 다시 시도해 주세요.' : error?.error === 'unsupported_image' || error?.error === 'image_too_large' || error?.error === 'server_configuration' || error?.error === 'gemini_access_denied' || error?.error === 'gemini_rate_limited' || error?.error === 'invalid_extraction' || error?.error === 'extraction_timeout' || error?.error === 'extraction_unavailable' ? error.message : error?.error === 'authentication_required' ? '로그인이 만료되었어요. 다시 로그인해 주세요.' : '사진을 읽지 못했어요. 잠시 뒤 다시 시도하거나 사진을 바꿔 주세요.';
     renderError('추출을 완료하지 못했어요', message, renderPreview);
   }
 }
