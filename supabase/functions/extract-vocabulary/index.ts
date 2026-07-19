@@ -6,6 +6,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const MAX_EXTRACTION_ITEMS = 150;
 const MAX_EXTRACTION_TEXT_LENGTH = 300;
 const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+let selectedGeminiModel: string | null = null;
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
@@ -56,13 +57,26 @@ const responseSchema = {
 
 const prompt = `사진에 실제로 읽히는 영어 단어 또는 구와 그에 대응하는 한글 뜻만 순서대로 추출하세요. 번호, 제목, 예문, 발음기호, 장식 문구는 제외하세요. 확신하지 못하면 추측하지 말고 confidence를 low로 하고 note에 짧게 이유를 쓰세요. 영어와 한글 뜻의 열을 바꾸지 마세요. JSON 스키마에 맞는 값만 반환하세요.`;
 
+async function resolveGeminiModel(key: string) {
+  if (selectedGeminiModel) return selectedGeminiModel;
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models', { headers: { 'x-goog-api-key': key } });
+  if (!response.ok) return 'models/gemini-2.5-flash';
+  const { models = [] } = await response.json() as { models?: Array<{ name?: unknown; supportedGenerationMethods?: unknown }> };
+  const usable = models.filter((model) => typeof model.name === 'string' && Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'));
+  const preferred = usable.find((model) => model.name === 'models/gemini-2.5-flash')
+    ?? usable.find((model) => /flash/i.test(String(model.name)) && !/image/i.test(String(model.name)));
+  selectedGeminiModel = String(preferred?.name ?? 'models/gemini-2.5-flash');
+  return selectedGeminiModel;
+}
+
 async function requestGemini(mimeType: string, data: string) {
   const key = Deno.env.get('GEMINI_API_KEY_PRIMARY');
   if (!key) throw new Error('gemini key missing');
+  const model = await resolveGeminiModel(key);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25_000);
   try {
-    return await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+    return await fetch(`https://generativelanguage.googleapis.com/v1beta/${model}:generateContent`, {
       method: 'POST', signal: controller.signal, headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType, data } }] }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 16384, temperature: 0 } }),
     });
