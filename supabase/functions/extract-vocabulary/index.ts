@@ -59,7 +59,7 @@ async function requestGemini(mimeType: string, data: string) {
   try {
     return await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
       method: 'POST', signal: controller.signal, headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType, data } }] }], generationConfig: { responseMimeType: 'application/json', responseJsonSchema: responseSchema, temperature: 0 } }),
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType, data } }] }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 16384, temperature: 0 } }),
     });
   } finally { clearTimeout(timeout); }
 }
