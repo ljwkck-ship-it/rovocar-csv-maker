@@ -37,12 +37,12 @@ function renderStart() {
       <h1>손글씨 단어장을<br><em>바로 넣을 수 있게.</em></h1>
       <p class="lede">사진에서 영어와 뜻을 읽고, 틀린 곳만 고쳐 CSV로 내려받으세요.</p>
       <div class="paper-sample" aria-hidden="true">
-        <span>01</span><div><b>take care of</b><i>돌보다</i></div>
-        <span>02</span><div><b>involve</b><i>수반하다, 포함하다</i></div>
+        <div class="sample-row" style="display:flex;align-items:baseline;gap:22px;margin-bottom:15px"><span>01</span><b>take care of</b><i>돌보다</i></div>
+        <div class="sample-row" style="display:flex;align-items:baseline;gap:22px;margin-bottom:15px"><span>02</span><b>involve</b><i>수반하다, 포함하다</i></div>
         <div class="red-pencil">검토 후 완성!</div>
       </div>
       ${supabase && !session ? '<button class="upload-cta" id="loginButton"><span>카카오 로그인하고 시작</span><small>가족용 사용량을 안전하게 보호합니다</small></button>' : '<label class="upload-cta" for="photoInput"><span>사진 찍기 또는 선택</span><small>JPEG · PNG · WebP / 한 장씩</small></label>'}
-      <input id="photoInput" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" />
+      <input id="photoInput" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" />
       <p class="privacy-note">사진은 추출 요청 처리 후 서버에 저장하지 않으며, 결과는 이 브라우저에서 CSV를 만들 때만 사용됩니다. 실제 추출 때 사진은 <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noreferrer">Gemini 제공자</a>에게 전송됩니다.${supabase ? '' : ' 현재는 로컬 데모 모드입니다.'}</p>
     </section>`;
   if (supabase && !session) document.querySelector('#loginButton').addEventListener('click', login);
@@ -69,7 +69,7 @@ function renderPreview() {
   app.innerHTML = `<section class="workflow"><p class="eyebrow">선택한 사진</p><h1>글자가 모두<br>보이나요?</h1>
     <div class="photo-frame"><img id="previewImage" src="${state.objectUrl}" alt="선택한 단어장 사진 미리보기" style="transform: rotate(${state.rotation}deg)"></div>
     <ul class="checklist"><li>영어와 한글 뜻이 모두 보이나요?</li><li>흐림, 그림자, 손가락이 글자를 가리지 않나요?</li><li>종이가 가능한 한 반듯하게 찍혔나요?</li></ul>
-    <div class="button-row"><button class="secondary" id="rotate">↻ 회전</button><label class="secondary file-label" for="replacePhoto">다시 선택</label><input class="sr-only" id="replacePhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"></div>
+    <div class="button-row"><button class="secondary" id="rotate">↻ 회전</button><label class="secondary file-label" for="replacePhoto">다시 선택</label><input class="sr-only" id="replacePhoto" type="file" accept="image/jpeg,image/png,image/webp"></div>
     <button class="primary wide" id="extract">단어 추출하기 <span>→</span></button>
     ${status('현재는 안전한 로컬 데모 결과를 보여 줍니다. 실제 OCR 연결 전에는 로그인과 사용량 확인이 필요합니다.', 'info')}
   </section>`;
