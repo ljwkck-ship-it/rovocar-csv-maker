@@ -83,10 +83,13 @@ async function fileAsBase64(file) {
   return String(url).split(',', 2)[1];
 }
 async function extractFromServer() {
+  const { data: { session: currentSession } } = await supabase.auth.getSession();
+  if (!currentSession) throw { error: 'authentication_required' };
+  session = currentSession;
   const data = await fileAsBase64(state.file);
   const response = await fetch(`${supabaseUrl}/functions/v1/extract-vocabulary`, { method: 'POST', headers: { authorization: `Bearer ${session.access_token}`, 'content-type': 'application/json' }, body: JSON.stringify({ image: { mimeType: state.file.type, data } }) });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw payload;
+  if (!response.ok) throw { ...payload, error: payload.error || (response.status === 401 ? 'authentication_required' : 'extraction_unavailable') };
   return payload;
 }
 async function renderExtracting() {
